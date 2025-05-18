@@ -1,19 +1,19 @@
-import React, { useMemo } from 'react';
+import React, {useMemo} from 'react';
 import {
-    PieChart,
-    Pie,
-    Cell,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-    BarChart,
     Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Legend,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
     XAxis,
-    YAxis,
-    CartesianGrid
+    YAxis
 } from 'recharts';
-import { useQuery } from '@apollo/client';
-import { GET_GENERATION_DISTRIBUTION } from '../../graphql/queries';
+import {useQuery} from '@apollo/client';
+import {GET_GENERATION_DISTRIBUTION} from '../../graphql/queries';
 
 const GenerationDistributionChart = ({
                                          data,
@@ -23,8 +23,6 @@ const GenerationDistributionChart = ({
                                          timeScope = 'day',
                                          chartType = 'pie'
                                      }) => {
-    // Obtenemos directamente los datos de distribución de generación
-    // usando la consulta específica para ello
     const {
         loading: distLoading,
         data: distributionData,
@@ -39,21 +37,17 @@ const GenerationDistributionChart = ({
         fetchPolicy: 'network-only'
     });
 
-    // Procesamos los datos para el gráfico
     const chartData = useMemo(() => {
-        // Si tenemos datos directamente de la consulta de distribución
         if (distributionData?.generationDistribution && Array.isArray(distributionData.generationDistribution)) {
             return distributionData.generationDistribution.map(item => ({
                 name: item.type,
                 value: item.avgValue,
                 percentage: item.percentage,
-                color: item.color || '#cccccc' // Color por defecto si no viene definido
+                color: item.color || '#cccccc'
             })).sort((a, b) => b.value - a.value);
         }
 
-        // Si no tenemos datos específicos, intentamos extraerlos del balance general
         if (data && Array.isArray(data) && data.length > 0) {
-            // Sumamos todos los valores por tipo de generación
             const aggregatedData = data.reduce((acc, dayData) => {
                 if (dayData.generation && dayData.generation.distribution && Array.isArray(dayData.generation.distribution)) {
                     dayData.generation.distribution.forEach(item => {
@@ -71,12 +65,10 @@ const GenerationDistributionChart = ({
                 return acc;
             }, {});
 
-            // Calculamos el total para los porcentajes
             const totalGeneration = Object.values(aggregatedData).reduce(
-                (sum, { total }) => sum + total, 0
+                (sum, {total}) => sum + total, 0
             );
 
-            // Convertimos a formato para la gráfica
             return Object.entries(aggregatedData).map(([type, data]) => ({
                 name: type,
                 value: data.total / data.count, // Promediamos
@@ -88,7 +80,6 @@ const GenerationDistributionChart = ({
         return [];
     }, [distributionData, data]);
 
-    // Estado de carga combinado
     const isLoading = loading || distLoading;
 
     if (isLoading) {
@@ -103,7 +94,6 @@ const GenerationDistributionChart = ({
         return <div className="chart-empty">No hay datos disponibles</div>;
     }
 
-    // Función para renderizar el tipo de gráfico adecuado
     const renderChart = () => {
         switch (chartType) {
             case 'bar':
@@ -111,14 +101,14 @@ const GenerationDistributionChart = ({
                     <BarChart
                         data={chartData}
                         layout="vertical"
-                        margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                        margin={{top: 5, right: 30, left: 100, bottom: 5}}
                     >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
+                        <CartesianGrid strokeDasharray="3 3"/>
+                        <XAxis type="number"/>
                         <YAxis
                             type="category"
                             dataKey="name"
-                            tick={{ fontSize: 12 }}
+                            tick={{fontSize: 12}}
                         />
                         <Tooltip
                             formatter={(value, name, props) => [
@@ -126,14 +116,14 @@ const GenerationDistributionChart = ({
                                 'Generación Media'
                             ]}
                         />
-                        <Legend />
+                        <Legend/>
                         <Bar
                             dataKey="value"
                             name="Generación Media"
                             fill="#8884d8"
                         >
                             {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                <Cell key={`cell-${index}`} fill={entry.color}/>
                             ))}
                         </Bar>
                     </BarChart>
@@ -152,12 +142,12 @@ const GenerationDistributionChart = ({
                             fill="#8884d8"
                             dataKey="value"
                             nameKey="name"
-                            label={({ name, percentage }) =>
+                            label={({name, percentage}) =>
                                 `${name}: ${percentage.toFixed(1)}%`
                             }
                         >
                             {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                <Cell key={`cell-${index}`} fill={entry.color}/>
                             ))}
                         </Pie>
                         <Tooltip
@@ -166,7 +156,7 @@ const GenerationDistributionChart = ({
                                 name
                             ]}
                         />
-                        <Legend />
+                        <Legend/>
                     </PieChart>
                 );
         }
@@ -200,7 +190,7 @@ const GenerationDistributionChart = ({
                             <td>
                   <span
                       className="color-indicator"
-                      style={{ backgroundColor: item.color }}
+                      style={{backgroundColor: item.color}}
                   ></span>
                                 {item.name}
                             </td>

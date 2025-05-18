@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, subMonths, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import DateRangePicker from '../components/common/DateRangePicker';
@@ -14,135 +14,86 @@ import { TIME_TRUNC_OPTIONS, DATE_RANGES, CHART_DISPLAY_OPTIONS } from '../confi
 import { calculateStatistics, calculateRenewablePercentage } from '../services/utils/dataTransformers';
 
 const HistoricalData = () => {
-    // Estados para gestionar los filtros y visualizaciones
     const [startDate, setStartDate] = useState(subMonths(new Date(), 1));
     const [endDate, setEndDate] = useState(new Date());
     const [timeTrunc, setTimeTrunc] = useState('day');
     const [chartType, setChartType] = useState('line');
-    const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'generation', 'demand'
+    const [activeTab, setActiveTab] = useState('overview');
     const [isExporting, setIsExporting] = useState(false);
 
-    // Formateamos las fechas para la consulta GraphQL
     const formattedStartDate = useMemo(() => {
-        return isValid(startDate) ? format(startDate, "yyyy-MM-dd'T'00:00") : '';
+        return isValid(startDate)
+            ? startDate.toISOString()
+            : null;
     }, [startDate]);
 
     const formattedEndDate = useMemo(() => {
-        return isValid(endDate) ? format(endDate, "yyyy-MM-dd'T'23:59") : '';
+        return isValid(endDate)
+            ? endDate.toISOString()
+            : null;
     }, [endDate]);
 
-    // Obtenemos los datos del balance eléctrico con el hook personalizado
-    const { loading, data, error, retry } = useElectricBalance(
+    const {
+        loading,
+        data,
+        error,
+        retry,
+        statistics: apiStatistics,
+        generationDistribution
+    } = useElectricBalance(
         formattedStartDate,
         formattedEndDate,
         timeTrunc
     );
 
-    // Calculamos estadísticas de los datos
+
     const statistics = useMemo(() => {
+        if (apiStatistics) return apiStatistics;
         return data && data.length > 0 ? calculateStatistics(data) : null;
-    }, [data]);
+    }, [data, apiStatistics]);
 
-    // Calculamos el porcentaje de renovables
     const renewablePercentage = useMemo(() => {
+        if (statistics?.renewablePercentage?.average) {
+            return statistics.renewablePercentage.average;
+        }
         return data && data.length > 0 ? calculateRenewablePercentage(data) : 0;
-    }, [data]);
+    }, [data, statistics]);
 
-    // Manejadores para los cambios de fecha
-    const handleStartDateChange = (date) => {
-        setStartDate(date);
-    };
+    const handleStartDateChange = useCallback((date) => {
+        if (date && isValid(date)) {
+            setStartDate(date);
+        }
+    }, []);
 
-    const handleEndDateChange = (date) => {
-        setEndDate(date);
-    };
+    const handleEndDateChange = useCallback((date) => {
+        if (date && isValid(date)) {
+            setEndDate(date);
+        }
+    }, []);
 
-    // Manejador para cambiar la granularidad de tiempo
-    const handleTimeTruncChange = (e) => {
+    const handleTimeTruncChange = useCallback((e) => {
         setTimeTrunc(e.target.value);
-    };
+    }, []);
 
-    // Manejador para los rangos predefinidos
-    const handlePresetRange = (days) => {
+    const handlePresetRange = useCallback((days) => {
+        if (!days || isNaN(days) || days <= 0) return;
+
         const end = new Date();
         const start = new Date();
         start.setDate(end.getDate() - days);
 
         setStartDate(start);
         setEndDate(end);
-    };
+    }, []);
 
-    // Manejador para cambiar el tipo de gráfico
-    const handleChartTypeChange = (e) => {
+    const handleChartTypeChange = useCallback((e) => {
         setChartType(e.target.value);
-    };
+    }, []);
 
-    // Manejador para cambiar de pestaña
-    const handleTabChange = (tab) => {
+    const handleTabChange = useCallback((tab) => {
         setActiveTab(tab);
-    };
+    }, []);
 
-    // Función para exportar los datos a CSV
-    const handleExportData = () => {
-        if (!data || data.length === 0) return;
-
-        setIsExporting(true);
-
-        try {
-            // Transformamos los datos a formato CSV
-            const headers = [
-                'Fecha',
-                'Generación Total (MWh)',
-                'Generación Renovable (MWh)',
-                'Generación No Renovable (MWh)',
-                'Demanda Total (MWh)',
-                'Importaciones (MWh)',
-                'Exportaciones (MWh)',
-                'Balance Intercambio (MWh)'
-            ].join(',');
-
-            const rows = data.map(item => {
-                const date = item.date ? format(parseISO(item.date), 'dd/MM/yyyy HH:mm', { locale: es }) : '';
-                const genTotal = item.generation?.total || 0;
-                const genRenewable = item.generation?.renewable || 0;
-                const genNonRenewable = item.generation?.nonRenewable || 0;
-                const demand = item.demand?.total || 0;
-                const imports = item.interchange?.import || 0;
-                const exports = item.interchange?.export || 0;
-                const balance = (imports - exports) || 0;
-
-                return [
-                    date,
-                    genTotal.toFixed(2),
-                    genRenewable.toFixed(2),
-                    genNonRenewable.toFixed(2),
-                    demand.toFixed(2),
-                    imports.toFixed(2),
-                    exports.toFixed(2),
-                    balance.toFixed(2)
-                ].join(',');
-            });
-
-            const csvContent = [headers, ...rows].join('\n');
-
-            // Creamos un blob y un link para descargar
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', `balance-electrico-${format(startDate, 'yyyyMMdd')}-${format(endDate, 'yyyyMMdd')}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (err) {
-            console.error('Error al exportar datos:', err);
-        } finally {
-            setIsExporting(false);
-        }
-    };
-
-    // Renderizamos la sección adecuada según la pestaña activa
     const renderTabContent = () => {
         if (loading) {
             return <LoadingSpinner />;
@@ -157,7 +108,7 @@ const HistoricalData = () => {
             );
         }
 
-        if (!data || data.length === 0) {
+        if (!data || !Array.isArray(data) || data.length === 0) {
             return (
                 <div className="no-data-message">
                     <p>No hay datos disponibles para el período seleccionado.</p>
@@ -171,7 +122,11 @@ const HistoricalData = () => {
                 return (
                     <>
                         <Card title="Balance Eléctrico Histórico">
-                            <BalanceChart data={data} loading={loading} chartType={chartType} />
+                            <BalanceChart
+                                data={data}
+                                loading={loading}
+                                chartType={chartType}
+                            />
                         </Card>
 
                         {statistics && (
@@ -179,27 +134,39 @@ const HistoricalData = () => {
                                 <div className="statistics-grid">
                                     <div className="statistic-item">
                                         <h4>Generación Renovable Media</h4>
-                                        <p className="statistic-value">{statistics.renewableMean.toFixed(2)} MWh</p>
+                                        <p className="statistic-value">
+                                            {(statistics.generation?.average || statistics.renewableMean || 0).toFixed(2)} MWh
+                                        </p>
                                     </div>
                                     <div className="statistic-item">
                                         <h4>Demanda Media</h4>
-                                        <p className="statistic-value">{statistics.demandMean.toFixed(2)} MWh</p>
+                                        <p className="statistic-value">
+                                            {(statistics.demand?.average || statistics.demandMean || 0).toFixed(2)} MWh
+                                        </p>
                                     </div>
                                     <div className="statistic-item">
                                         <h4>Balance Importación/Exportación</h4>
-                                        <p className="statistic-value">{statistics.importExportBalance.toFixed(2)} MWh</p>
+                                        <p className="statistic-value">
+                                            {(statistics.importExportBalance || 0).toFixed(2)} MWh
+                                        </p>
                                     </div>
                                     <div className="statistic-item">
                                         <h4>Demanda Máxima</h4>
-                                        <p className="statistic-value">{statistics.maxDemand.toFixed(2)} MWh</p>
+                                        <p className="statistic-value">
+                                            {(statistics.demand?.max || statistics.maxDemand || 0).toFixed(2)} MWh
+                                        </p>
                                     </div>
                                     <div className="statistic-item">
                                         <h4>Demanda Mínima</h4>
-                                        <p className="statistic-value">{statistics.minDemand.toFixed(2)} MWh</p>
+                                        <p className="statistic-value">
+                                            {(statistics.demand?.min || statistics.minDemand || 0).toFixed(2)} MWh
+                                        </p>
                                     </div>
                                     <div className="statistic-item">
                                         <h4>Porcentaje Renovable</h4>
-                                        <p className="statistic-value">{renewablePercentage.toFixed(2)}%</p>
+                                        <p className="statistic-value">
+                                            {renewablePercentage.toFixed(2)}%
+                                        </p>
                                     </div>
                                 </div>
                             </Card>
@@ -211,7 +178,11 @@ const HistoricalData = () => {
                 return (
                     <>
                         <Card title="Distribución de Generación Eléctrica">
-                            <GenerationDistributionChart data={data} loading={loading} />
+                            <GenerationDistributionChart
+                                data={data}
+                                generationDistribution={generationDistribution}
+                                loading={loading}
+                            />
                         </Card>
 
                         <Card title="Evolución de Generación por Tipo">
@@ -224,7 +195,6 @@ const HistoricalData = () => {
                                 </p>
                             </div>
 
-                            {/* Aquí iría un gráfico adicional de evolución de generación por tipo */}
                             <div className="chart-placeholder">
                                 <p>Gráfico de evolución temporal de generación por tecnología</p>
                             </div>
@@ -236,23 +206,35 @@ const HistoricalData = () => {
                 return (
                     <>
                         <Card title="Tendencia de Demanda Eléctrica">
-                            <DemandTrendChart data={data} loading={loading} chartType={chartType} />
+                            <DemandTrendChart
+                                data={data}
+                                loading={loading}
+                                chartType={chartType}
+                            />
                         </Card>
 
                         <Card title="Análisis de Demanda">
                             <div className="info-box">
                                 <p>
-                                    <strong>Demanda media:</strong> {statistics?.demandMean.toFixed(2)} MWh
+                                    <strong>Demanda media:</strong> {
+                                    (statistics?.demand?.average ||
+                                        statistics?.demandMean || 0).toFixed(2)
+                                } MWh
                                 </p>
                                 <p>
-                                    <strong>Demanda máxima:</strong> {statistics?.maxDemand.toFixed(2)} MWh
+                                    <strong>Demanda máxima:</strong> {
+                                    (statistics?.demand?.max ||
+                                        statistics?.maxDemand || 0).toFixed(2)
+                                } MWh
                                 </p>
                                 <p>
-                                    <strong>Demanda mínima:</strong> {statistics?.minDemand.toFixed(2)} MWh
+                                    <strong>Demanda mínima:</strong> {
+                                    (statistics?.demand?.min ||
+                                        statistics?.minDemand || 0).toFixed(2)
+                                } MWh
                                 </p>
                             </div>
 
-                            {/* Aquí iría un gráfico o tabla adicional sobre la demanda */}
                             <div className="chart-placeholder">
                                 <p>Gráfico de distribución horaria de demanda</p>
                             </div>
@@ -286,7 +268,7 @@ const HistoricalData = () => {
                         />
 
                         <div className="preset-ranges">
-                            {DATE_RANGES.map((range) => (
+                            {Array.isArray(DATE_RANGES) && DATE_RANGES.map((range) => (
                                 <Button
                                     key={range.days}
                                     variant="secondary"
@@ -306,7 +288,7 @@ const HistoricalData = () => {
                             onChange={handleTimeTruncChange}
                             className="select-input"
                         >
-                            {TIME_TRUNC_OPTIONS.map((option) => (
+                            {Array.isArray(TIME_TRUNC_OPTIONS) && TIME_TRUNC_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>
                                     {option.label}
                                 </option>
@@ -322,22 +304,13 @@ const HistoricalData = () => {
                             onChange={handleChartTypeChange}
                             className="select-input"
                         >
-                            {CHART_DISPLAY_OPTIONS.map((option) => (
+                            {Array.isArray(CHART_DISPLAY_OPTIONS) && CHART_DISPLAY_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>
                                     {option.label}
                                 </option>
                             ))}
                         </select>
                     </div>
-                </div>
-
-                <div className="filter-actions">
-                    <Button
-                        onClick={handleExportData}
-                        disabled={loading || !data || data.length === 0 || isExporting}
-                    >
-                        {isExporting ? 'Exportando...' : 'Exportar a CSV'}
-                    </Button>
                 </div>
             </Card>
 
@@ -346,18 +319,21 @@ const HistoricalData = () => {
                     <button
                         className={`tab-button ${activeTab === 'overview' ? 'active' : ''}`}
                         onClick={() => handleTabChange('overview')}
+                        type="button"
                     >
                         Vista General
                     </button>
                     <button
                         className={`tab-button ${activeTab === 'generation' ? 'active' : ''}`}
                         onClick={() => handleTabChange('generation')}
+                        type="button"
                     >
                         Generación
                     </button>
                     <button
                         className={`tab-button ${activeTab === 'demand' ? 'active' : ''}`}
                         onClick={() => handleTabChange('demand')}
+                        type="button"
                     >
                         Demanda
                     </button>
@@ -370,7 +346,7 @@ const HistoricalData = () => {
 
             <div className="data-source-note">
                 <p>
-                    <strong>Fuente de datos:</strong> API de Red Eléctrica de España (REE) -
+                    <strong>Fuente de datos:</strong> API de Red Eléctrica de España (REE) - {' '}
                     <a
                         href="https://apidatos.ree.es/es/datos/balance/balance-electrico"
                         target="_blank"

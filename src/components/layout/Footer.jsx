@@ -6,7 +6,7 @@ const Footer = () => {
     return (
         <footer className="footer">
             <div className="footer-content">
-                <p>© {currentYear} Balance Eléctrico España. Datos proporcionados por Red Eléctrica de España (REE).</p>
+                <p>© {currentYear} Balance Eléctrico España. Datos proporcionados por Red Eléctrica de España (REE). Luis Alberto De La Torre</p>
             </div>
         </footer>
     );

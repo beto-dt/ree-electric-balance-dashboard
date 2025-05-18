@@ -9,7 +9,6 @@ const Button = ({
                     disabled = false,
                     ...props
                 }) => {
-    // Determinamos las clases CSS según la variante
     const baseClass = 'button';
     const variantClass = variant !== 'primary' ? `button-${variant}` : '';
     const buttonClass = `${baseClass} ${variantClass} ${className}`.trim();

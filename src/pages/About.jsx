@@ -1,4 +1,3 @@
-import React from 'react';
 import Card from '../components/common/Card';
 
 const About = () => {
@@ -65,8 +64,6 @@ const About = () => {
                         <ul>
                             <li>Docker</li>
                             <li>Docker Compose</li>
-                            <li>Jest (Testing)</li>
-                            <li>React Testing Library</li>
                         </ul>
                     </div>
                 </div>

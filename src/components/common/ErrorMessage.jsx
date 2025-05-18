@@ -17,15 +17,12 @@ const ErrorMessage = ({
                       }) => {
     const [detailsVisible, setDetailsVisible] = useState(showDetails);
 
-    // Extraemos detalles adicionales del error si están disponibles
     const hasDetails = error && (error.graphQLErrors || error.networkError || error.stack);
 
-    // Función para alternar la visibilidad de los detalles
     const toggleDetails = () => {
         setDetailsVisible(!detailsVisible);
     };
 
-    // Renderizamos los detalles del error
     const renderErrorDetails = () => {
         if (!error || !detailsVisible) return null;
 

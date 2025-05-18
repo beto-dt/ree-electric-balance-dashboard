@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { format, subMonths, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useState, useMemo } from 'react';
+import {  subMonths } from 'date-fns';
 import { useElectricBalance } from '../hooks/useElectricBalance';
 import DateRangePicker from '../components/common/DateRangePicker';
 import BalanceChart from '../components/charts/BalanceChart';
@@ -10,10 +9,9 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { TIME_TRUNC_OPTIONS, CHART_DISPLAY_OPTIONS, DATE_FORMATS } from '../config/constants';
+import { TIME_TRUNC_OPTIONS, CHART_DISPLAY_OPTIONS } from '../config/constants';
 
 const Dashboard = () => {
-    // Estado para las fechas y configuración
     const [startDate, setStartDate] = useState(subMonths(new Date(), 1));
     const [endDate, setEndDate] = useState(new Date());
     const [timeScope, setTimeScope] = useState('day');
@@ -21,7 +19,6 @@ const Dashboard = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
 
-    // Formateamos las fechas como cadenas ISO para GraphQL DateTime (ISO 8601)
     const formattedStartDate = useMemo(() => {
         return startDate ? startDate.toISOString() : null;
     }, [startDate]);
@@ -30,7 +27,6 @@ const Dashboard = () => {
         return endDate ? endDate.toISOString() : null;
     }, [endDate]);
 
-    // Configuramos opciones de paginación
     const paginationOptions = useMemo(() => ({
         page: currentPage,
         pageSize: itemsPerPage,
@@ -38,7 +34,6 @@ const Dashboard = () => {
         orderDirection: "DESC"
     }), [currentPage, itemsPerPage]);
 
-    // Obtenemos los datos del balance eléctrico
     const {
         loading,
         data,
@@ -54,35 +49,27 @@ const Dashboard = () => {
         paginationOptions
     );
 
-    // Determinamos si deberíamos mostrar los controles de paginación
     const showPagination = pagination && pagination.totalCount > pagination.pageSize;
 
-    // Manejadores para los cambios de fecha
     const handleStartDateChange = (date) => {
         setStartDate(date);
-        // Resetear a la primera página al cambiar las fechas
         setCurrentPage(1);
     };
 
     const handleEndDateChange = (date) => {
         setEndDate(date);
-        // Resetear a la primera página al cambiar las fechas
         setCurrentPage(1);
     };
 
-    // Manejador para cambiar la granularidad de tiempo
     const handleTimeScopeChange = (e) => {
         setTimeScope(e.target.value);
-        // Resetear a la primera página al cambiar la granularidad
         setCurrentPage(1);
     };
 
-    // Manejador para cambiar el tipo de gráfico
     const handleChartTypeChange = (e) => {
         setChartType(e.target.value);
     };
 
-    // Manejadores para la paginación
     const handleNextPage = () => {
         if (pagination && pagination.hasNextPage) {
             setCurrentPage(currentPage + 1);
@@ -95,13 +82,11 @@ const Dashboard = () => {
         }
     };
 
-    // Manejador para cambiar items por página
     const handleItemsPerPageChange = (e) => {
         setItemsPerPage(Number(e.target.value));
-        setCurrentPage(1); // Resetear a la primera página
+        setCurrentPage(1);
     };
 
-    // Preestablecemos rangos de fechas
     const handleLastWeek = () => {
         const end = new Date();
         const start = new Date();
@@ -129,7 +114,6 @@ const Dashboard = () => {
         setCurrentPage(1);
     };
 
-    // Renderizamos las estadísticas cuando están disponibles
     const renderStatistics = () => {
         if (!statistics) return null;
 
@@ -195,7 +179,6 @@ const Dashboard = () => {
         );
     };
 
-    // Renderizamos los controles de paginación
     const renderPagination = () => {
         if (!showPagination) return null;
 

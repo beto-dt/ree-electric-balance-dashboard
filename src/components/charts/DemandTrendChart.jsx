@@ -17,9 +17,7 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const DemandTrendChart = ({ data, loading, chartType = 'area', timeSeries }) => {
-    // Transformamos los datos para la gráfica
     const chartData = useMemo(() => {
-        // Si tenemos datos de series temporales específicos para demanda, los usamos
         if (timeSeries && timeSeries.length > 0) {
             return timeSeries.map(item => ({
                 date: format(parseISO(item.timestamp), 'dd MMM', { locale: es }),
@@ -27,11 +25,9 @@ const DemandTrendChart = ({ data, loading, chartType = 'area', timeSeries }) => 
             }));
         }
 
-        // Si no tenemos series temporales, procesamos los datos del balance general
         if (!data || data.length === 0) return [];
 
         return data.map(item => {
-            // Aseguramos que tenemos una fecha válida
             const date = item.date ? format(parseISO(item.date), 'dd MMM', { locale: es }) : '';
 
             return {
@@ -43,7 +39,6 @@ const DemandTrendChart = ({ data, loading, chartType = 'area', timeSeries }) => 
         });
     }, [data, timeSeries]);
 
-    // Calculamos estadísticas para mostrar
     const stats = useMemo(() => {
         if (chartData.length === 0) return null;
 
@@ -63,19 +58,16 @@ const DemandTrendChart = ({ data, loading, chartType = 'area', timeSeries }) => 
         return <div className="chart-empty">No hay datos disponibles</div>;
     }
 
-    // Función para renderizar el tipo de gráfico adecuado
     const renderChart = () => {
-        // Propiedades comunes para todos los tipos de gráficos
         const commonProps = {
             data: chartData,
             margin: { top: 10, right: 30, left: 0, bottom: 0 }
         };
 
-        // Definimos colores para las series
         const colors = {
-            demandaTotal: '#1a73e8',  // Azul
-            demandaPico: '#EA4335',   // Rojo
-            demandaValle: '#34A853'   // Verde
+            demandaTotal: '#1a73e8',
+            demandaPico: '#EA4335',
+            demandaValle: '#34A853'
         };
 
         switch (chartType) {

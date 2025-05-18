@@ -45,10 +45,8 @@ export const aggregateGenerationByType = (data) => {
         return {};
     }
 
-    // Inicializamos el objeto acumulador
     const aggregated = {};
 
-    // Recorremos todos los datos
     data.forEach(dayData => {
         if (dayData.generation && dayData.generation.distribution) {
             dayData.generation.distribution.forEach(item => {
@@ -60,11 +58,10 @@ export const aggregateGenerationByType = (data) => {
         }
     });
 
-    // Convertimos a formato para gráfica
     return Object.entries(aggregated).map(([type, value]) => ({
         name: type,
-        value: value / data.length, // Promediamos para el período
-    })).sort((a, b) => b.value - a.value); // Ordenamos de mayor a menor
+        value: value / data.length,
+    })).sort((a, b) => b.value - a.value);
 };
 
 /**
@@ -83,18 +80,15 @@ export const calculateStatistics = (data) => {
         };
     }
 
-    // Calculamos medias
     const renewableMean = data.reduce((sum, item) => sum + (item.generation?.renewable || 0), 0) / data.length;
     const demandMean = data.reduce((sum, item) => sum + (item.demand?.total || 0), 0) / data.length;
 
-    // Balance de importación/exportación
     const importExportBalance = data.reduce((sum, item) => {
         const importValue = item.interchange?.import || 0;
         const exportValue = item.interchange?.export || 0;
         return sum + (importValue - exportValue);
     }, 0) / data.length;
 
-    // Máximo y mínimo de demanda
     const demandValues = data.map(item => item.demand?.total || 0);
     const maxDemand = Math.max(...demandValues);
     const minDemand = Math.min(...demandValues);

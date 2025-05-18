@@ -22,7 +22,6 @@ export const useElectricBalance = (
 ) => {
     const [error, setError] = useState(null);
 
-    // Consulta para obtener el balance eléctrico
     const {
         loading: balanceLoading,
         data: balanceData,
@@ -30,22 +29,20 @@ export const useElectricBalance = (
         error: balanceError
     } = useQuery(GET_BALANCE_BY_DATE_RANGE, {
         variables: {
-            startDate, // DateTime se pasa directamente tal como está
-            endDate,   // DateTime se pasa directamente tal como está
+            startDate,
+            endDate,
             timeScope,
             ...paginationOptions
         },
-        // Opciones para manejar errores y refrescos
         onError: (err) => {
             console.error('Error al obtener datos del balance eléctrico:', err);
             setError(err.message);
         },
-        fetchPolicy: 'network-only', // Siempre obtenemos datos frescos
-        notifyOnNetworkStatusChange: true, // Para detectar estados de recarga
-        skip: !startDate || !endDate // Saltamos la consulta si no hay fechas
+        fetchPolicy: 'network-only',
+        notifyOnNetworkStatusChange: true,
+        skip: !startDate || !endDate
     });
 
-    // Consulta para obtener estadísticas
     const {
         loading: statsLoading,
         data: statsData,
@@ -59,7 +56,7 @@ export const useElectricBalance = (
         },
         onError: (err) => {
             console.error('Error al obtener estadísticas:', err);
-            if (!balanceError) { // Solo establecemos el error si no hay otro error ya
+            if (!balanceError) {
                 setError(err.message);
             }
         },
@@ -68,7 +65,6 @@ export const useElectricBalance = (
         skip: !startDate || !endDate
     });
 
-    // Consultas para obtener series temporales de diferentes indicadores
     const {
         loading: generationSeriesLoading,
         data: generationSeriesData,
@@ -114,12 +110,10 @@ export const useElectricBalance = (
         skip: !startDate || !endDate
     });
 
-    // Verificamos si alguna consulta está cargando
     const loading = balanceLoading || statsLoading ||
         generationSeriesLoading || demandSeriesLoading ||
         renewableSeriesLoading;
 
-    // Función para reintentar todas las consultas en caso de error
     const retry = () => {
         setError(null);
         refetchBalance();
@@ -129,9 +123,7 @@ export const useElectricBalance = (
         refetchRenewableSeries();
     };
 
-    // Procesamos los datos para devolverlos en un formato unificado
     const processedData = balanceData?.electricBalanceByDateRange?.items?.map(item => {
-        // Aseguramos que generation siempre sea un array
         const generationDistribution = Array.isArray(item.generation)
             ? item.generation
             : [];
@@ -147,13 +139,11 @@ export const useElectricBalance = (
             },
             demand: {
                 total: item.totalDemand,
-                // Si hay información más detallada disponible, la agregamos
                 peak: statsData?.electricBalanceStats?.demand?.max || null,
                 valley: statsData?.electricBalanceStats?.demand?.min || null
             },
             interchange: {
                 balance: item.balance || 0,
-                // Si no hay información directa de importación/exportación, podemos inferir
                 import: item.balance > 0 ? item.balance : 0,
                 export: item.balance < 0 ? Math.abs(item.balance) : 0
             },
@@ -161,14 +151,12 @@ export const useElectricBalance = (
         };
     }) || [];
 
-    // Series temporales para gráficos
     const timeSeries = {
         generation: generationSeriesData?.electricBalanceTimeSeries || [],
         demand: demandSeriesData?.electricBalanceTimeSeries || [],
         renewable: renewableSeriesData?.electricBalanceTimeSeries || []
     };
 
-    // Estadísticas procesadas
     const statistics = statsData?.electricBalanceStats ? {
         generation: statsData.electricBalanceStats.generation,
         demand: statsData.electricBalanceStats.demand,
@@ -179,7 +167,6 @@ export const useElectricBalance = (
         timeScope: statsData.electricBalanceStats.timeScope
     } : null;
 
-    // Metadatos de paginación
     const pagination = balanceData?.electricBalanceByDateRange ? {
         totalCount: balanceData.electricBalanceByDateRange.totalCount,
         page: balanceData.electricBalanceByDateRange.page,

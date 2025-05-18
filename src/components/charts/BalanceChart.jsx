@@ -17,15 +17,11 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const BalanceChart = ({ data, loading, chartType = 'line', timeSeries }) => {
-    // Transformamos los datos para la gráfica
     const chartData = useMemo(() => {
-        // Validamos que los datos sean válidos
         if (!data || !Array.isArray(data) || data.length === 0) return [];
 
-        // Si tenemos series temporales, las usamos preferentemente
         if (timeSeries && timeSeries.generation && Array.isArray(timeSeries.generation) && timeSeries.generation.length > 0) {
             return timeSeries.generation.map((genItem, index) => {
-                // Buscamos los datos correspondientes en las otras series
                 const demandItem = timeSeries.demand && Array.isArray(timeSeries.demand) && timeSeries.demand.length > index ?
                     timeSeries.demand[index] : null;
                 const renewableItem = timeSeries.renewable && Array.isArray(timeSeries.renewable) && timeSeries.renewable.length > index ?
@@ -40,19 +36,15 @@ const BalanceChart = ({ data, loading, chartType = 'line', timeSeries }) => {
             });
         }
 
-        // Si no tenemos series temporales, usamos los datos del balance
         return data.map(item => {
             const date = item.date ? format(parseISO(item.date), 'dd MMM', { locale: es }) : '';
 
-            // Validamos que los campos de generación existan
             const generationTotal = item.generation && typeof item.generation.total === 'number' ? item.generation.total : 0;
             const generationRenovable = item.generation && typeof item.generation.renewable === 'number' ? item.generation.renewable : 0;
             const generationNoRenovable = item.generation && typeof item.generation.nonRenewable === 'number' ? item.generation.nonRenewable : 0;
 
-            // Validamos que los campos de demanda existan
             const demandaTotal = item.demand && typeof item.demand.total === 'number' ? item.demand.total : 0;
 
-            // Validamos que los campos de intercambio existan
             const balance = item.interchange && typeof item.interchange.balance === 'number' ? item.interchange.balance : 0;
 
             return {
@@ -75,19 +67,16 @@ const BalanceChart = ({ data, loading, chartType = 'line', timeSeries }) => {
         return <div className="chart-empty">No hay datos disponibles</div>;
     }
 
-    // Definimos colores consistentes para las diferentes series
     const colors = {
-        generacionTotal: '#1a73e8',       // Azul
-        generacionRenovable: '#34a853',   // Verde
-        generacionNoRenovable: '#ea4335', // Rojo
-        demandaTotal: '#fbbc04',          // Amarillo
-        balance: '#9c27b0',               // Púrpura
-        porcentajeRenovable: '#00c853'    // Verde brillante
+        generacionTotal: '#1a73e8',
+        generacionRenovable: '#34a853',
+        generacionNoRenovable: '#ea4335',
+        demandaTotal: '#fbbc04',
+        balance: '#9c27b0',
+        porcentajeRenovable: '#00c853'
     };
 
-    // Función para renderizar el tipo de gráfico adecuado
     const renderChart = () => {
-        // Propiedades comunes para todos los tipos de gráficos
         const commonProps = {
             data: chartData,
             margin: { top: 5, right: 30, left: 20, bottom: 5 }
@@ -101,7 +90,6 @@ const BalanceChart = ({ data, loading, chartType = 'line', timeSeries }) => {
             { dataKey: 'balance', name: 'Balance (Imp/Exp)', color: colors.balance }
         ];
 
-        // Renderizamos el tipo de gráfico según la selección
         switch (chartType) {
             case 'bar':
                 return (
